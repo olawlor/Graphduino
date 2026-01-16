@@ -69,7 +69,8 @@ jobs:
             runner: ubuntu-latest
           - platform: macos
             runner: macos-latest
-    runs-on: ${{ matrix.platform }}
+    runs-on: ${{ matrix.runner }}
+    concurrency: ${{ matrix.platform }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -92,14 +93,18 @@ jobs:
           swift-version: "6.0.0"
 
       - name: Build Binary
-        run: swift build -c release --build-path . --show-bin-path
+        run: swift build -c release --build-path /release --show-bin-path >> binary_output
+
+      - name: Get Binary Path
+        run: |
+          echo "BINARY_PATH=$(cat binary_output)" >> $GITHUB_ENV
 
       - name: Upload release
         if: ${{ !github.event.act }} # skip during local actions testing
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: Graphduino
+          file: $BINARY_PATH
           asset_name: Graphduino-${{ matrix.platform }}
           release_name: ${{ env.VERSION }}
           tag: ${{ env.VERSION }}
