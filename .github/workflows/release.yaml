@@ -78,6 +78,9 @@ jobs:
 
       - name: Install Ubuntu deps
         if: ${{ matrix.platform }} == "linux"
+        #uses: awalsh128/cache-apt-pkgs-action@latest
+        #with:
+        #  packages: libasound2-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama-dev libwayland-dev libxkbcommon-dev
         run: |
           sudo apt update
           sudo apt install libasound2-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama-dev libwayland-dev libxkbcommon-dev
@@ -89,4 +92,15 @@ jobs:
           swift-version: "6.0.0"
 
       - name: Build Binary
-        run: swift build -c release
+        run: swift build -c release --build-path . --show-bin-path
+
+      - name: Upload release
+        if: ${{ !github.event.act }} # skip during local actions testing
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: Graphduino
+          asset_name: Graphduino-${{ matrix.platform }}
+          release_name: ${{ env.VERSION }}
+          tag: ${{ env.VERSION }}
+          overwrite: true
