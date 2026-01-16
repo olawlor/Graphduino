@@ -107,5 +107,5 @@ jobs:
           file: $BINARY_PATH
           asset_name: Graphduino-${{ matrix.platform }}
           release_name: ${{ env.VERSION }}
-          tag: ${{ env.VERSION }}
+          tag: ${{ needs.get-version.version }}
           overwrite: true
