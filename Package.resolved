@@ -1,0 +1,24 @@
+{
+  "originHash" : "f4159af2b761da598a3b3df70c5bed5c42e5bedafcf2bc848b695205f2050e51",
+  "pins" : [
+    {
+      "identity" : "raylib",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/STREGAsGate/Raylib",
+      "state" : {
+        "branch" : "master",
+        "revision" : "9e7c83604f74211e4f8f3c38c1c52d4434f51bc1"
+      }
+    },
+    {
+      "identity" : "swiftserial",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/yeokm1/SwiftSerial",
+      "state" : {
+        "revision" : "0e824cc38c6802e69543d0c1406d34babfd68e2e",
+        "version" : "0.1.2"
+      }
+    }
+  ],
+  "version" : 3
+}
