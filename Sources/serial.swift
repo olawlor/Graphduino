@@ -11,20 +11,23 @@ import SwiftSerial // from https://github.com/olawlor/SwiftSerial
 
 // 'final' helps performance, '@unchecked Sendable' because we do our own locking
 final class ArduinoBridge : @unchecked Sendable {
+	public let verbose : Bool
     private let serialPort: SerialPort
     private var sensorValues: [Float] = []
     private let lock = NSLock() // synchronizes sensorValues array access
 
-    init(path: String) {
+    init(path: String, verbose: Bool = false) {
+		self.verbose = verbose
         self.serialPort = SerialPort(path: path)
+		if (verbose) { print("Serial port path: '\(path)'") }
     }
 
     func startListening() {
         do {
             try serialPort.openPort()
             let port = serialPort
-            try port.setSettings(baudRateSetting: .symmetrical(.baud9600), minimumBytesToRead: 1)
-			print("Successfully opened serial port");
+            try port.setSettings(baudRateSetting: .symmetrical(.baud9600), minimumBytesToRead: 1, timeout:1)
+			if (verbose) { print("Successfully opened serial port") }
             
 			Task {
 				do {
@@ -32,7 +35,7 @@ final class ArduinoBridge : @unchecked Sendable {
 					for await line in try port.asyncLines() {
 						// Trim whitespace/carriage returns if your device sends \r\n
 						let cleanLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
-						print("Received serial line: \(cleanLine)");
+						if (verbose) { print("  Serial data: \(cleanLine)") }
 						
 						if !cleanLine.isEmpty {
 							self.parseLine(cleanLine)
