@@ -99,11 +99,7 @@ jobs:
 
       - name: Install MSVC Tools
         if: ${{ matrix.platform == 'windows' }}
-        uses: TheMrMilchmann/setup-msvc-dev@v4
-        with:
-          arch: x64
-          uwp: true
-          export-path-to-vs: true
+        uses: microsoft/setup-msbuild@v2
 
       - name: Setup Swift
         uses: SwiftyLab/setup-swift@latest
