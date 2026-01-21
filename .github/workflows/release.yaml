@@ -96,6 +96,8 @@ jobs:
         uses: TheMrMilchmann/setup-msvc-dev@v4
         with:
           arch: x64
+          uwp: true
+          export-path-to-vs: true
 
       - name: Setup Windows SDK
         if: ${{ matrix.platform == 'windows' }}
