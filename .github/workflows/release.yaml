@@ -1,0 +1,130 @@
+# Thanks to https://github.com/NiklasEi/bevy_game_template/blob/main/.github/workflows/release.yaml for much of this code
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
+      - "V*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version - in the form of v1.2.3"
+        required: true
+        type: string
+
+permissions: write-all
+
+name: Create release
+jobs:
+  get-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get tag
+        id: tag
+        run: echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+    outputs:
+      version: ${{ inputs.version || steps.tag.outputs.tag }}
+
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: get-version
+    env:
+      VERSION: ${{needs.get-version.outputs.version}}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Generate a changelog
+        uses: orhun/git-cliff-action@v4
+        id: git-cliff
+        with:
+          config: cliff.toml
+          args: --verbose --latest
+        env:
+          OUTPUT: CHANGELOG.md
+      - name: Create release
+        if: ${{ !github.event.act }} # skip during local actions testing
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+        with:
+          tag_name: ${{ env.VERSION }}
+          release_name: Release ${{ env.VERSION }}
+          body_path: ${{ steps.git-cliff.outputs.changelog }}
+          draft: false
+          prerelease: false
+
+  build-binary:
+    name: Build Binary Release
+    needs: [get-version, create-release]
+    env:
+      VERSION: ${{needs.get-version.outputs.version}}
+    strategy:
+      matrix:
+        include:
+          - platform: windows
+            runner: windows-latest
+            extension: .exe
+          - platform: linux
+            runner: ubuntu-latest
+            extension: ""
+          - platform: macos
+            runner: macos-latest
+            extension: ""
+    runs-on: ${{ matrix.runner }}
+    concurrency: ${{ matrix.platform }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install Ubuntu deps
+        if: ${{ matrix.platform == 'linux' }}
+        #uses: awalsh128/cache-apt-pkgs-action@latest
+        #with:
+        #  packages: libasound2-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama-dev libwayland-dev libxkbcommon-dev
+        run: |
+          sudo apt update
+          sudo apt install libasound2-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama-dev libwayland-dev libxkbcommon-dev
+
+      - name: Setup Windows SDK
+        if: ${{ matrix.platform == 'windows' }}
+        uses: fbactions/setup-winsdk@v2
+        with:
+          winsdk-build-version: 22000
+
+      - name: Install MSVC Tools
+        if: ${{ matrix.platform == 'windows' }}
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Setup Swift
+        uses: SwiftyLab/setup-swift@latest
+        with:
+          #skip-verify-signature: true
+          swift-version: "6.0.0"
+
+      - name: Build Binary
+        run: |
+          swift build -c release --static-swift-stdlib
+          swift build -c release --show-bin-path >> binary_output
+
+      - name: Get Binary Path
+        run: |
+          echo "BINARY_PATH=$(cat binary_output)" >> $GITHUB_ENV
+
+      - run: ls ${{ env.BINARY_PATH }}
+
+      - name: Upload release
+        if: ${{ !github.event.act }} # skip during local actions testing
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ env.BINARY_PATH }}/Graphduino
+          asset_name: Graphduino-${{ matrix.platform }}${{ matrix.extension }}
+          release_name: ${{ env.VERSION }}
+          tag: ${{ env.VERSION }}
+          overwrite: true
